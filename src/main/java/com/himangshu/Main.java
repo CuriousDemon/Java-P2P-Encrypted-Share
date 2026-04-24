@@ -1,14 +1,19 @@
 package com.himangshu;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("--- SecureDrop-P2P Project Started ---");
+        Scanner sc = new Scanner(System.in);
+        System.out.println("1. RECEIVE | 2. SEND");
+        int choice = sc.nextInt();
+        sc.nextLine(); // clear buffer
 
-        // This is a test to ensure your environment is ready
-        System.out.println("Hello, Himangshu! Your Java environment is working.");
-
-        for (int i = 1; i <= 5; i++) {
-            System.out.println("Initialising module " + i + "...");
+        if (choice == 1) {
+            FileReceiver.receiveFile();
+        } else {
+            System.out.print("Enter full path of file to send: ");
+            String path = sc.nextLine();
+            FileSender.sendFile(path);
         }
     }
 }
