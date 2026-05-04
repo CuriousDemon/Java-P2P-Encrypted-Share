@@ -7,40 +7,51 @@ import java.net.*;
 
 public class FileReceiver {
     public static void receiveFile() {
+        // Port 5000 is our dedicated "listening" port
         try (ServerSocket serverSocket = new ServerSocket(5000)) {
-            System.out.println("[RECEIVER] Waiting for secure file...");
+            System.out.println("[RECEIVER] Secure Server is ONLINE and waiting...");
 
-            // 1. Prepare the Cipher for DECRYPT mode
-            Cipher cipher = EncryptionUtils.getCipher(Cipher.DECRYPT_MODE);
+            while (!Thread.currentThread().isInterrupted()) {
+                // Wait for an incoming connection
+                try (Socket socket = serverSocket.accept()) {
 
-            try (Socket socket = serverSocket.accept();
-                 // 2. Wrap the socket input stream with the cipher
-                 CipherInputStream cis = new CipherInputStream(socket.getInputStream(), cipher);
-                 DataInputStream dis = new DataInputStream(cis)) {
+                    // FIX: Initialize the Cipher OUTSIDE of the try-with-resources parentheses
+                    // because Cipher does not implement AutoCloseable.
+                    Cipher decryptCipher = EncryptionUtils.getCipher(Cipher.DECRYPT_MODE);
 
-                // 3. Read Metadata
-                String fileName = dis.readUTF();
-                long fileSize = dis.readLong();
+                    // Now wrap the socket's input stream with our decryption engine
+                    try (CipherInputStream cis = new CipherInputStream(socket.getInputStream(), decryptCipher);
+                         DataInputStream dis = new DataInputStream(cis)) {
 
-                System.out.println("[RECEIVER] Connected! Receiving: " + fileName);
+                        // 1. Read Metadata (Sent by FileSender)
+                        String fileName = dis.readUTF();
+                        long fileSize = dis.readLong();
 
-                // 4. Save the file
-                FileOutputStream fos = new FileOutputStream("decrypted_" + fileName);
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                long totalReceived = 0;
+                        System.out.println("[RECEIVER] Receiving encrypted file: " + fileName + " (" + fileSize + " bytes)");
 
-                while (totalReceived < fileSize && (bytesRead = dis.read(buffer)) != -1) {
-                    fos.write(buffer, 0, bytesRead);
-                    totalReceived += bytesRead;
+                        // 2. Prepare the local file for writing
+                        File receivedFile = new File("decrypted_" + fileName);
+                        try (FileOutputStream fos = new FileOutputStream(receivedFile)) {
+
+                            byte[] buffer = new byte[4096];
+                            int bytesRead;
+                            long totalReceived = 0;
+
+                            // 3. Receive and decrypt the data in 4KB chunks
+                            while (totalReceived < fileSize && (bytesRead = dis.read(buffer)) != -1) {
+                                fos.write(buffer, 0, bytesRead);
+                                totalReceived += bytesRead;
+                            }
+                        }
+
+                        System.out.println("[RECEIVER] File successfully decrypted and saved: " + receivedFile.getName());
+                    }
+                } catch (Exception e) {
+                    System.err.println("[RECEIVER ERROR] Failed to process incoming file: " + e.getMessage());
                 }
-
-                fos.close();
-                System.out.println("[RECEIVER] Securely saved as: decrypted_" + fileName);
             }
-        } catch (Exception e) {
-            System.err.println("[RECEIVER ERROR] Decryption failed or connection lost.");
-            e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("[RECEIVER ERROR] Could not start server on port 5000: " + e.getMessage());
         }
     }
 }

@@ -13,7 +13,7 @@ public class Main {
         } else {
             System.out.print("Enter full path of file to send: ");
             String path = sc.nextLine();
-            FileSender.sendFile(path);
+            FileSender.sendFile(path, "localhost");
         }
     }
 }

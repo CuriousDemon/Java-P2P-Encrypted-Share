@@ -8,6 +8,10 @@ import javafx.stage.Stage;
 public class App extends Application {
     @Override
     public void start(Stage stage) throws Exception {
+
+        DiscoveryService.startBroadcasting();
+        DiscoveryService.startListening();
+
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/layout/main_view.fxml"));
         Scene scene = new Scene(fxmlLoader.load());
         stage.setTitle("SecureDrop-P2P");
